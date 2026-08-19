@@ -4,6 +4,7 @@ const path = require("path");
 const PageManager = require("./PageManager");
 const StyleRegistry = require("./StyleRegistry");
 const ListRenderer = require("./ListRenderer");
+const TableRenderer = require("./TableRenderer");
 
 const DEFAULT_FONT_FILES = {
     serifRegular: "Merriweather-VariableFont_opsz,wdth,wght.ttf",
@@ -53,6 +54,7 @@ class FormalDocument {
         this.layout = new PageManager(this.doc, this.options.margins);
         this.styles = new StyleRegistry();
         this.lists = new ListRenderer(this);
+        this.tables = new TableRenderer(this);
 
         this._registerFonts();
         this._applyDefaultFont();
@@ -139,14 +141,15 @@ class FormalDocument {
         const styleName = `h${level}`;
         const style = this.styles.get(styleName);
 
+        this.doc.font(style.fontFamily).fontSize(style.fontSize);
+
         const headingHeight = this.doc.heightOfString(content, {
-            font: style.fontFamily,
-            fontSize: style.fontSize,
             width: this.layout.contentWidth
         });
 
         const paragraphStyle = this.styles.get("paragraph");
-        const minParagraphHeight = paragraphStyle.fontSize + paragraphStyle.lineGap;
+        const minParagraphHeight =
+            paragraphStyle.fontSize + paragraphStyle.lineGap;
 
         const requiredSpace = headingHeight + minParagraphHeight;
 
@@ -185,11 +188,11 @@ class FormalDocument {
 
         const indentX = this.layout.contentX + style.leftIndent;
 
+        this.doc.font(style.fontFamily).fontSize(style.fontSize);
+
         const requiredHeight = this.doc.heightOfString(content, {
-            font: style.fontFamily,
-            fontSize: style.fontSize,
-            lineGap: style.lineGap,
-            width: indentWidth
+            width: indentWidth,
+            lineGap: style.lineGap
         });
 
         this.layout.checkSpace(
@@ -226,6 +229,10 @@ class FormalDocument {
         return this.lists.numbered(items, options);
     }
 
+    table(config) {
+        return this.tables.render(config);
+    }
+
     pageBreak() {
         if (this.layout.currentY > this.layout.margins.top) {
             this.layout.addPage();
@@ -235,17 +242,18 @@ class FormalDocument {
     }
 
     _renderTextBlock(content, style) {
+        this.doc.font(style.fontFamily).fontSize(style.fontSize);
+
         const textOptions = {
             width: this.layout.contentWidth,
             align: style.align,
             lineGap: style.lineGap
         };
 
-        const requiredHeight = this.doc.heightOfString(content, {
-            font: style.fontFamily,
-            fontSize: style.fontSize,
-            ...textOptions
-        });
+        const requiredHeight = this.doc.heightOfString(
+            content,
+            textOptions
+        );
 
         this.layout.checkSpace(requiredHeight);
 
