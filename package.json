@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/dds3579/pdf-generator/issues"
   },
-  "homepage": "https://github.com/dds3579/pdf-generator#readme"
+  "homepage": "https://github.com/dds3579/pdf-generator#readme",
+  "dependencies": {
+    "pdfkit": "^0.19.1"
+  }
 }
