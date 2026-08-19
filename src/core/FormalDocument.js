@@ -6,6 +6,7 @@ const StyleRegistry = require("./StyleRegistry");
 const ListRenderer = require("./ListRenderer");
 const TableRenderer = require("./TableRenderer");
 const PageFurnitureRenderer = require("./PageFurnitureRenderer");
+const CoverRenderer = require("./CoverRenderer");
 
 const DEFAULT_FONT_FILES = {
     serifRegular: "Merriweather-VariableFont_opsz,wdth,wght.ttf",
@@ -52,6 +53,7 @@ class FormalDocument {
             fontsDir: path.join(__dirname, "..", "fonts"),
             fontFiles: DEFAULT_FONT_FILES,
             title: "Untitled Document",
+            subtitle: "",
             author: "",
             organization: "",
             date: "",
@@ -106,6 +108,7 @@ class FormalDocument {
             info: {
                 Title: this.options.title,
                 Author: this.options.author,
+                Subject: this.options.subtitle || "",
                 Creator: "Formal PDF Engine"
             }
         });
@@ -115,6 +118,7 @@ class FormalDocument {
         this.lists = new ListRenderer(this);
         this.tables = new TableRenderer(this);
         this.pageFurniture = new PageFurnitureRenderer(this);
+        this.covers = new CoverRenderer(this);
 
         this._registerFonts();
         this._applyDefaultFont();
@@ -256,6 +260,36 @@ class FormalDocument {
             this.options.fontFiles.displayRegular,
             false
         );
+    }
+
+    cover(overrides = {}) {
+        if (
+            this.layout.pageNumber !== 1 ||
+            this.layout.currentY !== this.layout.margins.top
+        ) {
+            throw new Error(
+                "doc.cover() must be called at the very beginning of the document, " +
+                "before any other content."
+            );
+        }
+
+        this.covers.render(overrides);
+
+        const existingRaw = Number(this.options.pageNumbering.coverPages);
+
+        const existingCoverPages =
+            Number.isFinite(existingRaw) && existingRaw >= 0
+                ? Math.floor(existingRaw)
+                : 0;
+
+        this.options.pageNumbering.coverPages = Math.max(
+            existingCoverPages,
+            1
+        );
+
+        this.layout.addPage();
+
+        return this;
     }
 
     paragraph(content) {
