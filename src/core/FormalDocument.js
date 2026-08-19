@@ -290,9 +290,16 @@ class FormalDocument {
     return this;
   }
 
-  paragraph(content) {
-    const style = this.styles.get("paragraph");
+  paragraph(content, options = {}) {
+    const baseStyle = this.styles.get("paragraph");
+
+    const style = {
+      ...baseStyle,
+      ...options,
+    };
+
     this._renderTextBlock(content, style);
+
     return this;
   }
 
@@ -435,28 +442,42 @@ class FormalDocument {
   }
 
   save(filePath, options = {}) {
-    const outputPath = path.resolve(filePath);
-    const outputDir = path.dirname(outputPath);
+    return new Promise((resolve, reject) => {
+      try {
+        const outputPath = path.resolve(filePath);
+        const outputDir = path.dirname(outputPath);
 
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
+        if (!fs.existsSync(outputDir)) {
+          fs.mkdirSync(outputDir, { recursive: true });
+        }
 
-    FormalDocument.lastOutputPath = outputPath;
+        FormalDocument.lastOutputPath = outputPath;
 
-    this.doc.pipe(fs.createWriteStream(outputPath));
+        const stream = fs.createWriteStream(outputPath);
 
-    this.pageFurniture.render();
+        stream.on("finish", () => {
+          if (!options.silent) {
+            console.log(`✓ PDF generated successfully: ${outputPath}`);
+          }
 
-    this.doc.end();
+          resolve(outputPath);
+        });
 
-    if (!options.silent) {
-      console.log(`✓ PDF generated successfully: ${outputPath}`);
-    }
+        stream.on("error", reject);
+
+        this.doc.on("error", reject);
+
+        this.doc.pipe(stream);
+
+        this.pageFurniture.render();
+
+        this.doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 }
-
-
 
 FormalDocument.lastOutputPath = null;
 
