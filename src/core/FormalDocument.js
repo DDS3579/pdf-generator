@@ -5,6 +5,7 @@ const PageManager = require("./PageManager");
 const StyleRegistry = require("./StyleRegistry");
 const ListRenderer = require("./ListRenderer");
 const TableRenderer = require("./TableRenderer");
+const PageFurnitureRenderer = require("./PageFurnitureRenderer");
 
 const DEFAULT_FONT_FILES = {
     serifRegular: "Merriweather-VariableFont_opsz,wdth,wght.ttf",
@@ -12,6 +13,31 @@ const DEFAULT_FONT_FILES = {
     sansRegular: "Inter-VariableFont_opsz,wght.ttf",
     sansItalic: "Inter-Italic-VariableFont_opsz,wght.ttf",
     displayRegular: "SpaceGrotesk-VariableFont_wght.ttf"
+};
+
+const DEFAULT_HEADER = {
+    enabled: "auto",
+    left: "{organization}",
+    center: "",
+    right: "",
+    rule: true,
+    firstPage: null,
+    coverPage: null
+};
+
+const DEFAULT_FOOTER = {
+    enabled: true,
+    left: "{title}",
+    center: "{confidentiality}",
+    right: "{page}",
+    rule: false,
+    firstPage: null,
+    coverPage: null
+};
+
+const DEFAULT_PAGE_NUMBERING = {
+    start: 1,
+    coverPages: 0
 };
 
 class FormalDocument {
@@ -24,7 +50,16 @@ class FormalDocument {
                 right: 72
             },
             fontsDir: path.join(__dirname, "..", "fonts"),
-            fontFiles: DEFAULT_FONT_FILES
+            fontFiles: DEFAULT_FONT_FILES,
+            title: "Untitled Document",
+            author: "",
+            organization: "",
+            date: "",
+            confidentiality: "",
+            confidential: false,
+            header: DEFAULT_HEADER,
+            footer: DEFAULT_FOOTER,
+            pageNumbering: DEFAULT_PAGE_NUMBERING
         };
 
         this.options = {
@@ -40,13 +75,37 @@ class FormalDocument {
             }
         };
 
+        this.options.confidentiality =
+            this._normalizeConfidentiality(options);
+
+        this.options.header = this._normalizeFurnitureConfig(
+            options.header,
+            DEFAULT_HEADER
+        );
+
+        this.options.footer = this._normalizeFurnitureConfig(
+            options.footer,
+            DEFAULT_FOOTER
+        );
+
+        this.options.pageNumbering = {
+            ...DEFAULT_PAGE_NUMBERING,
+            ...(options.pageNumbering || {})
+        };
+
+        if (this.options.header.enabled === "auto") {
+            this.options.header.enabled = Boolean(
+                this.options.organization
+            );
+        }
+
         this.doc = new PDFDocument({
             size: "A4",
             margins: this.options.margins,
             bufferPages: true,
             info: {
-                Title: options.title || "Untitled Document",
-                Author: options.author || "Unknown",
+                Title: this.options.title,
+                Author: this.options.author,
                 Creator: "Formal PDF Engine"
             }
         });
@@ -55,9 +114,77 @@ class FormalDocument {
         this.styles = new StyleRegistry();
         this.lists = new ListRenderer(this);
         this.tables = new TableRenderer(this);
+        this.pageFurniture = new PageFurnitureRenderer(this);
 
         this._registerFonts();
         this._applyDefaultFont();
+    }
+
+    _normalizeConfidentiality(options) {
+        if (
+            typeof options.confidentiality === "string" &&
+            options.confidentiality.trim().length > 0
+        ) {
+            return options.confidentiality.trim();
+        }
+
+        if (options.confidential === true) {
+            return "CONFIDENTIAL";
+        }
+
+        if (
+            typeof options.confidential === "string" &&
+            options.confidential.trim().length > 0
+        ) {
+            return options.confidential.trim();
+        }
+
+        return "";
+    }
+
+    _normalizeFurnitureConfig(value, defaults) {
+        if (value === false) {
+            return {
+                ...defaults,
+                enabled: false,
+                firstPage: null,
+                coverPage: null
+            };
+        }
+
+        if (value === true) {
+            return {
+                ...defaults,
+                enabled: true,
+                firstPage: null,
+                coverPage: null
+            };
+        }
+
+        if (value && typeof value === "object") {
+            const config = {
+                ...defaults,
+                ...value
+            };
+
+            config.firstPage =
+                value.firstPage && typeof value.firstPage === "object"
+                    ? { ...value.firstPage }
+                    : null;
+
+            config.coverPage =
+                value.coverPage && typeof value.coverPage === "object"
+                    ? { ...value.coverPage }
+                    : null;
+
+            return config;
+        }
+
+        return {
+            ...defaults,
+            firstPage: null,
+            coverPage: null
+        };
     }
 
     _applyDefaultFont() {
@@ -278,6 +405,9 @@ class FormalDocument {
         }
 
         this.doc.pipe(fs.createWriteStream(outputPath));
+
+        this.pageFurniture.render();
+
         this.doc.end();
 
         console.log(`✓ PDF generated successfully: ${outputPath}`);
