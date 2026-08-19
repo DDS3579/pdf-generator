@@ -79,6 +79,20 @@ class StyleRegistry {
                 headerRuleWidth: 0.75,
                 bottomRuleWidth: 1,
                 rowRuleWidth: 0.25
+            },
+
+            header: {
+                fontFamily: "Serif-Regular",
+                fontSize: 9,
+                uppercase: true,
+                ruleWidth: 0.5
+            },
+
+            footer: {
+                fontFamily: "Serif-Regular",
+                fontSize: 9,
+                uppercase: false,
+                ruleWidth: 0.5
             }
         };
     }
