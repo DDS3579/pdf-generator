@@ -93,6 +93,52 @@ class StyleRegistry {
                 fontSize: 9,
                 uppercase: false,
                 ruleWidth: 0.5
+            },
+
+            coverOrganization: {
+                fontFamily: "Serif-Regular",
+                fontSize: 12,
+                lineGap: 2,
+                spacingAfter: 48,
+                uppercase: true
+            },
+
+            coverTitle: {
+                fontFamily: "Serif-Regular",
+                fontSize: 28,
+                lineGap: 6,
+                spacingAfter: 18
+            },
+
+            coverSubtitle: {
+                fontFamily: "Serif-Regular",
+                fontSize: 14,
+                lineGap: 4,
+                spacingAfter: 30
+            },
+
+            coverMetaLabel: {
+                fontFamily: "Serif-Regular",
+                fontSize: 9,
+                uppercase: true,
+                spacingAfter: 6
+            },
+
+            coverMetaValue: {
+                fontFamily: "Serif-Regular",
+                fontSize: 12,
+                lineGap: 3,
+                spacingAfter: 24
+            },
+
+            coverDate: {
+                fontFamily: "Serif-Regular",
+                fontSize: 11
+            },
+
+            coverRule: {
+                lineWidth: 0.75,
+                widthRatio: 0.35
             }
         };
     }
