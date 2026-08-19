@@ -7,6 +7,7 @@ const ListRenderer = require("./ListRenderer");
 const TableRenderer = require("./TableRenderer");
 const PageFurnitureRenderer = require("./PageFurnitureRenderer");
 const CoverRenderer = require("./CoverRenderer");
+const ReferenceRenderer = require("./ReferenceRenderer");
 
 const DEFAULT_FONT_FILES = {
     serifRegular: "Merriweather-VariableFont_opsz,wdth,wght.ttf",
@@ -119,6 +120,7 @@ class FormalDocument {
         this.tables = new TableRenderer(this);
         this.pageFurniture = new PageFurnitureRenderer(this);
         this.covers = new CoverRenderer(this);
+        this.referencesRenderer = new ReferenceRenderer(this);
 
         this._registerFonts();
         this._applyDefaultFont();
@@ -392,6 +394,10 @@ class FormalDocument {
 
     table(config) {
         return this.tables.render(config);
+    }
+
+    references(items, options = {}) {
+        return this.referencesRenderer.render(items, options);
     }
 
     pageBreak() {
