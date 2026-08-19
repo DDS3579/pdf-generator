@@ -61,6 +61,24 @@ class StyleRegistry {
                 nestedIndent: 18,
                 markerGap: 8,
                 bulletMarker: "•"
+            },
+
+            table: {
+                cellFontFamily: "Serif-Regular",
+                cellFontSize: 10,
+                headerFontFamily: "Serif-Regular",
+                headerFontSize: 10,
+                lineGap: 3,
+                cellPaddingX: 8,
+                cellPaddingY: 6,
+                spacingBefore: 12,
+                spacingAfter: 16,
+                align: "left",
+                rowRules: false,
+                topRuleWidth: 1,
+                headerRuleWidth: 0.75,
+                bottomRuleWidth: 1,
+                rowRuleWidth: 0.25
             }
         };
     }
