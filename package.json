@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "generate": "node pdf.js",    
-    "test": "node --test tests/",
+    "test": "node --test tests/*.test.js",
     "samples": "node scripts/generate-samples.js"
   },
   "repository": {
