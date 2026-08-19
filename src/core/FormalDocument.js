@@ -434,7 +434,7 @@ class FormalDocument {
     this.layout.currentY = this.doc.y + style.spacingAfter;
   }
 
-  save(filePath) {
+  save(filePath, options = {}) {
     const outputPath = path.resolve(filePath);
     const outputDir = path.dirname(outputPath);
 
@@ -442,14 +442,22 @@ class FormalDocument {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
+    FormalDocument.lastOutputPath = outputPath;
+
     this.doc.pipe(fs.createWriteStream(outputPath));
 
     this.pageFurniture.render();
 
     this.doc.end();
 
-    console.log(`✓ PDF generated successfully: ${outputPath}`);
+    if (!options.silent) {
+      console.log(`✓ PDF generated successfully: ${outputPath}`);
+    }
   }
 }
+
+
+
+FormalDocument.lastOutputPath = null;
 
 module.exports = FormalDocument;
