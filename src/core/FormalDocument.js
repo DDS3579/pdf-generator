@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const PageManager = require("./PageManager");
 const StyleRegistry = require("./StyleRegistry");
+const ListRenderer = require("./ListRenderer");
 
 const DEFAULT_FONT_FILES = {
     serifRegular: "Merriweather-VariableFont_opsz,wdth,wght.ttf",
@@ -15,7 +16,12 @@ const DEFAULT_FONT_FILES = {
 class FormalDocument {
     constructor(options = {}) {
         const defaults = {
-            margins: { top: 72, bottom: 72, left: 72, right: 72 },
+            margins: {
+                top: 72,
+                bottom: 72,
+                left: 72,
+                right: 72
+            },
             fontsDir: path.join(__dirname, "..", "fonts"),
             fontFiles: DEFAULT_FONT_FILES
         };
@@ -23,8 +29,14 @@ class FormalDocument {
         this.options = {
             ...defaults,
             ...options,
-            margins: { ...defaults.margins, ...(options.margins || {}) },
-            fontFiles: { ...defaults.fontFiles, ...(options.fontFiles || {}) }
+            margins: {
+                ...defaults.margins,
+                ...(options.margins || {})
+            },
+            fontFiles: {
+                ...defaults.fontFiles,
+                ...(options.fontFiles || {})
+            }
         };
 
         this.doc = new PDFDocument({
@@ -40,14 +52,15 @@ class FormalDocument {
 
         this.layout = new PageManager(this.doc, this.options.margins);
         this.styles = new StyleRegistry();
-        
+        this.lists = new ListRenderer(this);
+
         this._registerFonts();
         this._applyDefaultFont();
     }
 
     _applyDefaultFont() {
-        const pStyle = this.styles.get('paragraph');
-        this.doc.font(pStyle.fontFamily).fontSize(pStyle.fontSize);
+        const paragraphStyle = this.styles.get("paragraph");
+        this.doc.font(paragraphStyle.fontFamily).fontSize(paragraphStyle.fontSize);
     }
 
     _fontPath(fileName) {
@@ -56,87 +69,120 @@ class FormalDocument {
 
     _registerFont(alias, fileName, required = false) {
         const filePath = this._fontPath(fileName);
+
         if (!fs.existsSync(filePath)) {
-            if (required) throw new Error(`Required font not found: ${filePath}`);
+            if (required) {
+                throw new Error(
+                    `Required font file not found:\n\n` +
+                    `${filePath}\n\n` +
+                    `Please place "${fileName}" in the fonts directory.`
+                );
+            }
+
             return false;
         }
+
         try {
             this.doc.registerFont(alias, filePath);
             return true;
         } catch (error) {
-            if (required) throw new Error(`Failed to register font: ${error.message}`);
+            if (required) {
+                throw new Error(
+                    `Failed to register required font "${fileName}".\n` +
+                    `PDFKit error: ${error.message}`
+                );
+            }
+
             return false;
         }
     }
 
     _registerFonts() {
-        this._registerFont("Serif-Regular", this.options.fontFiles.serifRegular, true);
-        this._registerFont("Serif-Italic", this.options.fontFiles.serifItalic, false);
-        this._registerFont("Sans-Regular", this.options.fontFiles.sansRegular, false);
-        this._registerFont("Sans-Italic", this.options.fontFiles.sansItalic, false);
-        this._registerFont("Display-Regular", this.options.fontFiles.displayRegular, false);
+        this._registerFont(
+            "Serif-Regular",
+            this.options.fontFiles.serifRegular,
+            true
+        );
+
+        this._registerFont(
+            "Serif-Italic",
+            this.options.fontFiles.serifItalic,
+            false
+        );
+
+        this._registerFont(
+            "Sans-Regular",
+            this.options.fontFiles.sansRegular,
+            false
+        );
+
+        this._registerFont(
+            "Sans-Italic",
+            this.options.fontFiles.sansItalic,
+            false
+        );
+
+        this._registerFont(
+            "Display-Regular",
+            this.options.fontFiles.displayRegular,
+            false
+        );
     }
 
-    /**
-     * Renders a standard paragraph.
-     */
     paragraph(content) {
-        const style = this.styles.get('paragraph');
+        const style = this.styles.get("paragraph");
         this._renderTextBlock(content, style);
+        return this;
     }
 
-    /**
-     * Renders a heading (H1, H2, H3).
-     * Includes "Keep-with-next" logic to prevent stranding.
-     */
     heading(level, content) {
         const styleName = `h${level}`;
         const style = this.styles.get(styleName);
 
-        // 1. Measure the heading height
         const headingHeight = this.doc.heightOfString(content, {
             font: style.fontFamily,
             fontSize: style.fontSize,
             width: this.layout.contentWidth
         });
 
-        // 2. Calculate minimum space needed (Heading + at least one line of paragraph)
-        const pStyle = this.styles.get('paragraph');
-        const minParagraphHeight = pStyle.fontSize + pStyle.lineGap;
+        const paragraphStyle = this.styles.get("paragraph");
+        const minParagraphHeight = paragraphStyle.fontSize + paragraphStyle.lineGap;
+
         const requiredSpace = headingHeight + minParagraphHeight;
 
-        // 3. Trigger page break if we don't have enough space for BOTH
         if (this.layout.currentY + requiredSpace > this.layout.maxY) {
             this.layout.addPage();
         }
 
-        // 4. Apply spacing before (ONLY if we are not at the very top of a new page)
-        if (style.spacingBefore > 0 && this.layout.currentY > this.layout.margins.top) {
+        if (
+            style.spacingBefore > 0 &&
+            this.layout.currentY > this.layout.margins.top
+        ) {
             this.layout.moveDown(style.spacingBefore);
         }
 
-        // 5. Render heading
         this.doc.font(style.fontFamily).fontSize(style.fontSize);
+
         this.doc.text(content, this.layout.contentX, this.layout.currentY, {
             width: this.layout.contentWidth,
             align: style.align
         });
 
-        // 6. Update cursor and apply spacing after
         this.layout.currentY = this.doc.y + style.spacingAfter;
 
-        // Reset to default paragraph font
         this._applyDefaultFont();
+
+        return this;
     }
 
-    /**
-     * Renders a blockquote.
-     */
     quote(content) {
-        const style = this.styles.get('quote');
-        
-        // Adjust width and X position for indentation
-        const indentWidth = this.layout.contentWidth - style.leftIndent - style.rightIndent;
+        const style = this.styles.get("quote");
+
+        const indentWidth =
+            this.layout.contentWidth -
+            style.leftIndent -
+            style.rightIndent;
+
         const indentX = this.layout.contentX + style.leftIndent;
 
         const requiredHeight = this.doc.heightOfString(content, {
@@ -146,13 +192,19 @@ class FormalDocument {
             width: indentWidth
         });
 
-        this.layout.checkSpace(requiredHeight + style.spacingBefore + style.spacingAfter);
+        this.layout.checkSpace(
+            requiredHeight + style.spacingBefore + style.spacingAfter
+        );
 
-        if (style.spacingBefore > 0 && this.layout.currentY > this.layout.margins.top) {
+        if (
+            style.spacingBefore > 0 &&
+            this.layout.currentY > this.layout.margins.top
+        ) {
             this.layout.moveDown(style.spacingBefore);
         }
 
         this.doc.font(style.fontFamily).fontSize(style.fontSize);
+
         this.doc.text(content, indentX, this.layout.currentY, {
             width: indentWidth,
             align: style.align,
@@ -160,12 +212,28 @@ class FormalDocument {
         });
 
         this.layout.currentY = this.doc.y + style.spacingAfter;
+
         this._applyDefaultFont();
+
+        return this;
     }
 
-    /**
-     * Internal helper to render text blocks with pagination.
-     */
+    bullets(items, options = {}) {
+        return this.lists.bullets(items, options);
+    }
+
+    numbered(items, options = {}) {
+        return this.lists.numbered(items, options);
+    }
+
+    pageBreak() {
+        if (this.layout.currentY > this.layout.margins.top) {
+            this.layout.addPage();
+        }
+
+        return this;
+    }
+
     _renderTextBlock(content, style) {
         const textOptions = {
             width: this.layout.contentWidth,
@@ -182,7 +250,13 @@ class FormalDocument {
         this.layout.checkSpace(requiredHeight);
 
         this.doc.font(style.fontFamily).fontSize(style.fontSize);
-        this.doc.text(content, this.layout.contentX, this.layout.currentY, textOptions);
+
+        this.doc.text(
+            content,
+            this.layout.contentX,
+            this.layout.currentY,
+            textOptions
+        );
 
         this.layout.currentY = this.doc.y + style.spacingAfter;
     }
@@ -190,10 +264,14 @@ class FormalDocument {
     save(filePath) {
         const outputPath = path.resolve(filePath);
         const outputDir = path.dirname(outputPath);
-        if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+        if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir, { recursive: true });
+        }
 
         this.doc.pipe(fs.createWriteStream(outputPath));
         this.doc.end();
+
         console.log(`✓ PDF generated successfully: ${outputPath}`);
     }
 }
