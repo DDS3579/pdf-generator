@@ -150,6 +150,22 @@ class StyleRegistry {
                 spacingAfter: 14,
                 spacingAfterItem: 8,
                 markerGap: 8
+            },
+
+            figure: {
+                spacingBefore: 16,
+                spacingAfter: 18,
+                defaultWidthRatio: 0.75,
+                align: "center",
+                borderWidth: 0.5
+            },
+
+            caption: {
+                fontFamily: "Serif-Regular",
+                fontSize: 9.5,
+                lineGap: 2,
+                spacingBefore: 6,
+                align: "center"
             }
         };
     }
