@@ -121,7 +121,6 @@ function resolveOutput(output, defaultOutput) {
         return path.resolve(defaultOutput);
     }
 
-    // Bare filenames go into output/.
     if (output === path.basename(output)) {
         return path.resolve(path.join("output", output));
     }
@@ -129,7 +128,7 @@ function resolveOutput(output, defaultOutput) {
     return path.resolve(output);
 }
 
-function executeConfig(config, cliOutput, defaultOutput, fileName) {
+async function executeConfig(config, cliOutput, defaultOutput, fileName) {
     const build = config.build || config.render;
 
     if (typeof build !== "function") {
@@ -178,7 +177,7 @@ function executeConfig(config, cliOutput, defaultOutput, fileName) {
     console.log("✓ Document initialized");
 
     try {
-        build(doc);
+        await build(doc);
     } catch (error) {
         throw new CliError(
             `Failed while rendering document content.\n${error.message}`,
@@ -193,7 +192,6 @@ function executeConfig(config, cliOutput, defaultOutput, fileName) {
     console.log("✓ Content rendered");
     console.log("✓ Pagination completed");
 
-    // If build() already called doc.save(), do not save again.
     if (FormalDocument.lastOutputPath) {
         return {
             outputPath: FormalDocument.lastOutputPath
@@ -201,7 +199,7 @@ function executeConfig(config, cliOutput, defaultOutput, fileName) {
     }
 
     try {
-        doc.save(output, {
+        await doc.save(output, {
             silent: true
         });
     } catch (error) {
@@ -220,14 +218,13 @@ function executeConfig(config, cliOutput, defaultOutput, fileName) {
     };
 }
 
-function finalizeDocumentInstance(
+async function finalizeDocumentInstance(
     doc,
     cliOutput,
     configOutput,
     defaultOutput,
     fileName
 ) {
-    // If the script already saved itself, respect that output.
     if (FormalDocument.lastOutputPath) {
         return {
             outputPath: FormalDocument.lastOutputPath
@@ -244,7 +241,7 @@ function finalizeDocumentInstance(
     );
 
     try {
-        doc.save(output, {
+        await doc.save(output, {
             silent: true
         });
     } catch (error) {
@@ -263,11 +260,10 @@ function finalizeDocumentInstance(
     };
 }
 
-function executeModule(moduleExports, documentPath, cliOutput) {
+async function executeModule(moduleExports, documentPath, cliOutput) {
     const defaultOutput = getDefaultOutput(documentPath);
     const fileName = documentPath;
 
-    // Support simple transpiled ESM-style default exports.
     if (
         moduleExports &&
         typeof moduleExports === "object" &&
@@ -289,7 +285,7 @@ function executeModule(moduleExports, documentPath, cliOutput) {
         let result;
 
         try {
-            result = moduleExports(FormalDocument, {
+            result = await moduleExports(FormalDocument, {
                 output: cliOutput
             });
         } catch (error) {
@@ -353,8 +349,6 @@ function executeModule(moduleExports, documentPath, cliOutput) {
         );
     }
 
-    // Legacy self-executing script:
-    // The file may have already called doc.save().
     if (FormalDocument.lastOutputPath) {
         return {
             outputPath: FormalDocument.lastOutputPath
@@ -389,7 +383,7 @@ function printError(error) {
     }
 }
 
-function runCli() {
+async function runCli() {
     try {
         const args = parseArgs(process.argv.slice(2));
 
@@ -431,7 +425,7 @@ function runCli() {
             );
         }
 
-        const result = executeModule(
+        const result = await executeModule(
             moduleExports,
             resolvedDocumentPath,
             args.output
