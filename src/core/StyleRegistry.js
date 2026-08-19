@@ -139,6 +139,17 @@ class StyleRegistry {
             coverRule: {
                 lineWidth: 0.75,
                 widthRatio: 0.35
+            }, 
+
+            reference: {
+                fontFamily: "Serif-Regular",
+                fontSize: 10,
+                lineGap: 3,
+                align: "left",
+                spacingBefore: 8,
+                spacingAfter: 14,
+                spacingAfterItem: 8,
+                markerGap: 8
             }
         };
     }
