@@ -9,6 +9,7 @@ const PageFurnitureRenderer = require("./PageFurnitureRenderer");
 const CoverRenderer = require("./CoverRenderer");
 const ReferenceRenderer = require("./ReferenceRenderer");
 const FigureRenderer = require("./FigureRenderer");
+const { ThemeManager } = require("./ThemeManager");
 
 const DEFAULT_FONT_FILES = {
   serifRegular: "Merriweather-VariableFont_opsz,wdth,wght.ttf",
@@ -64,6 +65,7 @@ class FormalDocument {
       header: DEFAULT_HEADER,
       footer: DEFAULT_FOOTER,
       pageNumbering: DEFAULT_PAGE_NUMBERING,
+      theme: "formal",
     };
 
     this.options = {
@@ -100,6 +102,8 @@ class FormalDocument {
       this.options.header.enabled = Boolean(this.options.organization);
     }
 
+    this.theme = new ThemeManager(this.options.theme);
+
     this.doc = new PDFDocument({
       size: "A4",
       margins: this.options.margins,
@@ -113,7 +117,7 @@ class FormalDocument {
     });
 
     this.layout = new PageManager(this.doc, this.options.margins);
-    this.styles = new StyleRegistry();
+    this.styles = new StyleRegistry(this.theme);
     this.lists = new ListRenderer(this);
     this.tables = new TableRenderer(this);
     this.pageFurniture = new PageFurnitureRenderer(this);
@@ -199,6 +203,9 @@ class FormalDocument {
   _applyDefaultFont() {
     const paragraphStyle = this.styles.get("paragraph");
     this.doc.font(paragraphStyle.fontFamily).fontSize(paragraphStyle.fontSize);
+    if (paragraphStyle.color) {
+      this.doc.fillColor(paragraphStyle.color);
+    }
   }
 
   _fontPath(fileName) {
@@ -308,6 +315,9 @@ class FormalDocument {
     const style = this.styles.get(styleName);
 
     this.doc.font(style.fontFamily).fontSize(style.fontSize);
+    if (style.color) {
+      this.doc.fillColor(style.color);
+    }
 
     const headingHeight = this.doc.heightOfString(content, {
       width: this.layout.contentWidth,
@@ -330,6 +340,9 @@ class FormalDocument {
     }
 
     this.doc.font(style.fontFamily).fontSize(style.fontSize);
+    if (style.color) {
+      this.doc.fillColor(style.color);
+    }
 
     this.doc.text(content, this.layout.contentX, this.layout.currentY, {
       width: this.layout.contentWidth,
@@ -352,6 +365,9 @@ class FormalDocument {
     const indentX = this.layout.contentX + style.leftIndent;
 
     this.doc.font(style.fontFamily).fontSize(style.fontSize);
+    if (style.color) {
+      this.doc.fillColor(style.color);
+    }
 
     const requiredHeight = this.doc.heightOfString(content, {
       width: indentWidth,
@@ -370,6 +386,9 @@ class FormalDocument {
     }
 
     this.doc.font(style.fontFamily).fontSize(style.fontSize);
+    if (style.color) {
+      this.doc.fillColor(style.color);
+    }
 
     this.doc.text(content, indentX, this.layout.currentY, {
       width: indentWidth,
@@ -418,6 +437,9 @@ class FormalDocument {
 
   _renderTextBlock(content, style) {
     this.doc.font(style.fontFamily).fontSize(style.fontSize);
+    if (style.color) {
+      this.doc.fillColor(style.color);
+    }
 
     const textOptions = {
       width: this.layout.contentWidth,
@@ -430,6 +452,9 @@ class FormalDocument {
     this.layout.checkSpace(requiredHeight);
 
     this.doc.font(style.fontFamily).fontSize(style.fontSize);
+    if (style.color) {
+      this.doc.fillColor(style.color);
+    }
 
     this.doc.text(
       content,
@@ -439,6 +464,7 @@ class FormalDocument {
     );
 
     this.layout.currentY = this.doc.y + style.spacingAfter;
+    this._applyDefaultFont();
   }
 
   save(filePath, options = {}) {
