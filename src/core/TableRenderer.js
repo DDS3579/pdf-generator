@@ -8,8 +8,9 @@ const VALID_ALIGNS = new Set(["left", "center", "right"]);
  * - Wrapped cell text
  * - Repeating header rows across pages
  * - Whole-row page breaking
- * - Horizontal rules only by default
- * - Theme-aware colors
+ * - Horizontal rules by default
+ * - Optional zebra rows
+ * - Optional caption and automatic table numbering
  */
 
 class TableRenderer {
@@ -20,6 +21,7 @@ class TableRenderer {
   render(config) {
     const style = this.document.styles.get("table");
     const layout = this.document.layout;
+    const pdf = this.document.doc;
 
     this._validateConfig(config);
 
@@ -53,6 +55,24 @@ class TableRenderer {
     const useZebra =
       config.zebra === true ||
       (config.zebra !== false && Boolean(style.zebraBgColor));
+
+    const captionText = this._formatCaption(config);
+
+    const captionStyle = this.document.styles.get("tableCaption");
+
+    let captionHeight = 0;
+    let captionSpacingAfter = 0;
+
+    if (captionText) {
+      pdf.font(captionStyle.fontFamily).fontSize(captionStyle.fontSize);
+
+      captionHeight = pdf.heightOfString(captionText, {
+        width: layout.contentWidth,
+        lineGap: captionStyle.lineGap
+      });
+
+      captionSpacingAfter = captionStyle.spacingAfter || 0;
+    }
 
     if (
       style.spacingBefore > 0 &&
@@ -106,10 +126,36 @@ class TableRenderer {
       ? rowHeights[0]
       : 0;
 
-    const initialRequiredHeight = headerHeight + firstRowHeight;
+    const initialRequiredHeight =
+      captionHeight +
+      captionSpacingAfter +
+      headerHeight +
+      firstRowHeight;
+
+    if (initialRequiredHeight > availableFullPage) {
+      throw new Error(
+        "Table caption, header, and first row are too tall to fit on a full page."
+      );
+    }
 
     if (layout.currentY + initialRequiredHeight > layout.maxY) {
       layout.addPage();
+    }
+
+    if (captionText) {
+      pdf.font(captionStyle.fontFamily).fontSize(captionStyle.fontSize);
+
+      if (captionStyle.color) {
+        pdf.fillColor(captionStyle.color);
+      }
+
+      pdf.text(captionText, layout.contentX, layout.currentY, {
+        width: layout.contentWidth,
+        align: captionStyle.align,
+        lineGap: captionStyle.lineGap
+      });
+
+      layout.currentY = pdf.y + captionSpacingAfter;
     }
 
     this._drawHeader(headerCells, columnWidths, style);
@@ -163,6 +209,52 @@ class TableRenderer {
         "Table rows must be an array."
       );
     }
+  }
+
+  _formatCaption(config) {
+    if (
+      config.caption === undefined ||
+      config.caption === null ||
+      config.caption === false ||
+      config.caption === ""
+    ) {
+      return "";
+    }
+
+    const text = String(config.caption)
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!text) {
+      return "";
+    }
+
+    if (config.autoLabel === false) {
+      return text;
+    }
+
+    const label =
+      config.label === undefined
+        ? "Table"
+        : String(config.label).trim();
+
+    if (!label) {
+      return text;
+    }
+
+    if (!this.document.counters) {
+      this.document.counters = {};
+    }
+
+    if (!Number.isFinite(this.document.counters.table)) {
+      this.document.counters.table = 0;
+    }
+
+    this.document.counters.table += 1;
+
+    const tableNumber = this.document.counters.table;
+
+    return `${label} ${tableNumber}. ${text}`;
   }
 
   _computeColumnWidths(columnWidths, columnCount) {
