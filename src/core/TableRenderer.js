@@ -8,9 +8,10 @@ const VALID_ALIGNS = new Set(["left", "center", "right"]);
  * - Wrapped cell text
  * - Repeating header rows across pages
  * - Whole-row page breaking
- * - Horizontal rules by default
+ * - Horizontal rules only by default
  * - Optional zebra rows
  * - Optional caption and automatic table numbering
+ * - Theme-aware colors
  */
 
 class TableRenderer {

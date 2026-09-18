@@ -16,7 +16,9 @@ class ReferenceRenderer {
 
   render(items, options = {}) {
     if (!Array.isArray(items)) {
-      throw new Error("doc.references(items) requires an array of references.");
+      throw new Error(
+        "doc.references(items) requires an array of references."
+      );
     }
 
     if (items.length === 0) {
@@ -28,7 +30,9 @@ class ReferenceRenderer {
     const pdf = this.document.doc;
 
     let heading =
-      options.heading === undefined ? "References" : options.heading;
+      options.heading === undefined
+        ? "References"
+        : options.heading;
 
     if (heading === true) {
       heading = "References";
@@ -39,13 +43,18 @@ class ReferenceRenderer {
       : 1;
 
     if (heading && ![1, 2, 3].includes(headingLevel)) {
-      throw new Error("Reference headingLevel must be 1, 2, or 3.");
+      throw new Error(
+        "Reference headingLevel must be 1, 2, or 3."
+      );
     }
 
     const numbered = options.numbered !== false;
 
     const startRaw = Number(options.start);
-    const start = Number.isInteger(startRaw) && startRaw > 0 ? startRaw : 1;
+    const start =
+      Number.isInteger(startRaw) && startRaw > 0
+        ? startRaw
+        : 1;
 
     const texts = items.map((item, index) => {
       return this._normalizeItem(item, index);
@@ -54,13 +63,15 @@ class ReferenceRenderer {
     pdf.font(style.fontFamily).fontSize(style.fontSize);
 
     const lastNumber = start + texts.length - 1;
-    const markerWidth = numbered ? pdf.widthOfString(`[${lastNumber}]`) : 0;
+    const markerWidth = numbered
+      ? pdf.widthOfString(`[${lastNumber}]`)
+      : 0;
 
     const firstReferenceHeight = this._measureReference(
       texts[0],
       style,
       markerWidth,
-      numbered,
+      numbered
     );
 
     if (heading) {
@@ -69,7 +80,7 @@ class ReferenceRenderer {
       pdf.font(headingStyle.fontFamily).fontSize(headingStyle.fontSize);
 
       const headingHeight = pdf.heightOfString(String(heading), {
-        width: layout.contentWidth,
+        width: layout.contentWidth
       });
 
       const headingSpacingBefore =
@@ -103,7 +114,7 @@ class ReferenceRenderer {
         referenceNumber,
         style,
         markerWidth,
-        numbered,
+        numbered
       );
 
       const isLast = index === texts.length - 1;
@@ -138,14 +149,16 @@ class ReferenceRenderer {
       }
     } else {
       throw new Error(
-        `${location} must be a string or a structured reference object.`,
+        `${location} must be a string or a structured reference object.`
       );
     }
 
     text = text.replace(/\s+/g, " ").trim();
 
     if (text.length === 0) {
-      throw new Error(`${location} cannot be empty.`);
+      throw new Error(
+        `${location} cannot be empty.`
+      );
     }
 
     return text;
@@ -207,19 +220,21 @@ class ReferenceRenderer {
 
     pdf.font(style.fontFamily).fontSize(style.fontSize);
 
-    const markerSpace = numbered ? markerWidth + style.markerGap : 0;
+    const markerSpace = numbered
+      ? markerWidth + style.markerGap
+      : 0;
 
     const textWidth = layout.contentWidth - markerSpace;
 
     if (textWidth <= 0) {
       throw new Error(
-        "Reference marker indentation leaves no available width for text.",
+        "Reference marker indentation leaves no available width for text."
       );
     }
 
     return pdf.heightOfString(text, {
       width: textWidth,
-      lineGap: style.lineGap,
+      lineGap: style.lineGap
     });
   }
 
@@ -229,14 +244,16 @@ class ReferenceRenderer {
 
     const marker = `[${referenceNumber}]`;
 
-    const markerSpace = numbered ? markerWidth + style.markerGap : 0;
+    const markerSpace = numbered
+      ? markerWidth + style.markerGap
+      : 0;
 
     const textX = layout.contentX + markerSpace;
     const textWidth = layout.contentWidth - markerSpace;
 
     if (textWidth <= 0) {
       throw new Error(
-        "Reference marker indentation leaves no available width for text.",
+        "Reference marker indentation leaves no available width for text."
       );
     }
 
@@ -244,7 +261,7 @@ class ReferenceRenderer {
 
     const requiredHeight = pdf.heightOfString(text, {
       width: textWidth,
-      lineGap: style.lineGap,
+      lineGap: style.lineGap
     });
 
     layout.checkSpace(requiredHeight);
@@ -258,10 +275,11 @@ class ReferenceRenderer {
 
       const markerTextWidth = pdf.widthOfString(marker);
 
-      const markerDrawX = layout.contentX + markerWidth - markerTextWidth;
+      const markerDrawX =
+        layout.contentX + markerWidth - markerTextWidth;
 
       pdf.text(marker, markerDrawX, y, {
-        lineBreak: false,
+        lineBreak: false
       });
     }
 
@@ -272,7 +290,7 @@ class ReferenceRenderer {
     pdf.text(text, textX, y, {
       width: textWidth,
       align: style.align,
-      lineGap: style.lineGap,
+      lineGap: style.lineGap
     });
 
     layout.currentY = pdf.y;

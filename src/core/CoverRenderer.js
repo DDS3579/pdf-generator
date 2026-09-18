@@ -20,7 +20,7 @@ class CoverRenderer {
       organization: options.organization,
       date: options.date,
       preparedByLabel: "Prepared by",
-      ...overrides,
+      ...overrides
     };
 
     const toText = (value) => {
@@ -37,7 +37,7 @@ class CoverRenderer {
       author: toText(merged.author),
       organization: toText(merged.organization),
       date: toText(merged.date),
-      preparedByLabel: toText(merged.preparedByLabel),
+      preparedByLabel: toText(merged.preparedByLabel)
     };
 
     this._draw(cover);
@@ -70,13 +70,13 @@ class CoverRenderer {
       pdf.text(text, x, y, {
         width,
         align: "center",
-        lineGap: style.lineGap,
+        lineGap: style.lineGap
       });
 
       y = pdf.y + style.spacingAfter;
     }
 
-    const titleMinY = pageHeight * 0.3;
+    const titleMinY = pageHeight * 0.30;
     y = Math.max(y, titleMinY);
 
     if (cover.title) {
@@ -91,7 +91,7 @@ class CoverRenderer {
       pdf.text(cover.title, x, y, {
         width,
         align: "center",
-        lineGap: style.lineGap,
+        lineGap: style.lineGap
       });
 
       y = pdf.y + style.spacingAfter;
@@ -109,7 +109,7 @@ class CoverRenderer {
       pdf.text(cover.subtitle, x, y, {
         width,
         align: "center",
-        lineGap: style.lineGap,
+        lineGap: style.lineGap
       });
 
       y = pdf.y + style.spacingAfter;
@@ -139,7 +139,7 @@ class CoverRenderer {
 
         pdf.text(labelText, x, metaY, {
           width,
-          align: "center",
+          align: "center"
         });
 
         metaY = pdf.y + labelStyle.spacingAfter;
@@ -154,7 +154,7 @@ class CoverRenderer {
       pdf.text(cover.author, x, metaY, {
         width,
         align: "center",
-        lineGap: valueStyle.lineGap,
+        lineGap: valueStyle.lineGap
       });
 
       metaY = pdf.y + valueStyle.spacingAfter;
@@ -180,7 +180,7 @@ class CoverRenderer {
 
       pdf.text(cover.date, x, dateY, {
         width,
-        align: "center",
+        align: "center"
       });
     }
 
@@ -193,7 +193,9 @@ class CoverRenderer {
     const style = this.document.styles.get("coverRule");
 
     const ruleWidth = layout.contentWidth * style.widthRatio;
-    const xStart = layout.contentX + (layout.contentWidth - ruleWidth) / 2;
+    const xStart =
+      layout.contentX +
+      (layout.contentWidth - ruleWidth) / 2;
 
     pdf.save();
 

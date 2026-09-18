@@ -55,19 +55,19 @@ class PageFurnitureRenderer {
         date: options.date || "",
         confidentiality: options.confidentiality || "",
         page: displayPageNumber > 0 ? String(displayPageNumber) : "",
-        totalPages: numberedTotalPages > 0 ? String(numberedTotalPages) : "",
+        totalPages: numberedTotalPages > 0 ? String(numberedTotalPages) : ""
       };
 
       this._renderSection("header", {
         isCoverPage,
         physicalPageNumber,
-        context,
+        context
       });
 
       this._renderSection("footer", {
         isCoverPage,
         physicalPageNumber,
-        context,
+        context
       });
     }
   }
@@ -76,7 +76,7 @@ class PageFurnitureRenderer {
     const config = this._getConfig(
       sectionName,
       payload.isCoverPage,
-      payload.physicalPageNumber,
+      payload.physicalPageNumber
     );
 
     let enabled = config.enabled;
@@ -120,7 +120,11 @@ class PageFurnitureRenderer {
           ? layout.margins.top * 0.72
           : layout.pageHeight - layout.margins.bottom * 0.72;
 
-      this._drawHorizontalRule(ruleY, style.ruleWidth || 0.5, style.ruleColor);
+      this._drawHorizontalRule(
+        ruleY,
+        style.ruleWidth || 0.5,
+        style.ruleColor
+      );
     }
   }
 
@@ -140,7 +144,7 @@ class PageFurnitureRenderer {
 
     return {
       ...base,
-      ...(override || {}),
+      ...(override || {})
     };
   }
 
@@ -245,7 +249,7 @@ class PageFurnitureRenderer {
     }
 
     pdf.text(fittedText, x, y, {
-      lineBreak: false,
+      lineBreak: false
     });
   }
 
