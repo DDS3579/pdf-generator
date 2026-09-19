@@ -12,9 +12,11 @@ function isValidColor(color) {
 
 function normalizeColor(color) {
   if (!color) return null;
+
   if (color.startsWith("#") && color.length === 4) {
     return `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
   }
+
   return color;
 }
 
@@ -31,9 +33,10 @@ const PRESETS = {
       tableZebraBg: null,
       calloutBg: "#f8f8f8",
       calloutBorder: "#cccccc",
-      coverAccent: "#111111",
-    },
+      coverAccent: "#111111"
+    }
   },
+
   modern: {
     colors: {
       text: "#1f2937",
@@ -46,9 +49,10 @@ const PRESETS = {
       tableZebraBg: "#f9fafb",
       calloutBg: "#eff6ff",
       calloutBorder: "#bfdbfe",
-      coverAccent: "#2563eb",
-    },
+      coverAccent: "#2563eb"
+    }
   },
+
   corporate: {
     colors: {
       text: "#0f172a",
@@ -61,9 +65,10 @@ const PRESETS = {
       tableZebraBg: "#f8fafc",
       calloutBg: "#f0f9ff",
       calloutBorder: "#bae6fd",
-      coverAccent: "#0369a1",
-    },
+      coverAccent: "#0369a1"
+    }
   },
+
   academic: {
     colors: {
       text: "#000000",
@@ -76,9 +81,10 @@ const PRESETS = {
       tableZebraBg: null,
       calloutBg: "#fcfcfc",
       calloutBorder: "#800000",
-      coverAccent: "#800000",
-    },
+      coverAccent: "#800000"
+    }
   },
+
   minimal: {
     colors: {
       text: "#333333",
@@ -91,9 +97,9 @@ const PRESETS = {
       tableZebraBg: null,
       calloutBg: "#fafafa",
       calloutBorder: "#cccccc",
-      coverAccent: "#333333",
-    },
-  },
+      coverAccent: "#333333"
+    }
+  }
 };
 
 class ThemeManager {
@@ -109,20 +115,24 @@ class ThemeManager {
       if (!PRESETS[themeOption]) {
         throw new Error(
           `Unknown theme preset: "${themeOption}". ` +
-            `Valid presets: ${Object.keys(PRESETS).join(", ")}`,
+          `Valid presets: ${Object.keys(PRESETS).join(", ")}`
         );
       }
+
       basePreset = PRESETS[themeOption];
     } else if (themeOption && typeof themeOption === "object") {
       if (themeOption.base && PRESETS[themeOption.base]) {
         basePreset = PRESETS[themeOption.base];
       }
+
       if (themeOption.colors && typeof themeOption.colors === "object") {
         userColors = themeOption.colors;
       }
     }
 
-    const mergedColors = { ...basePreset.colors };
+    const mergedColors = {
+      ...basePreset.colors
+    };
 
     for (const [key, value] of Object.entries(userColors)) {
       if (value === null || value === "transparent") {
@@ -131,14 +141,17 @@ class ThemeManager {
         if (!isValidColor(value)) {
           throw new Error(
             `Invalid color value for "${key}": "${value}". ` +
-              `Expected hex color (e.g., #1f2937).`,
+            `Expected hex color (e.g., #1f2937).`
           );
         }
+
         mergedColors[key] = normalizeColor(value);
       }
     }
 
-    return { colors: mergedColors };
+    return {
+      colors: mergedColors
+    };
   }
 
   color(key) {
@@ -150,5 +163,5 @@ module.exports = {
   ThemeManager,
   PRESETS,
   isValidColor,
-  normalizeColor,
+  normalizeColor
 };

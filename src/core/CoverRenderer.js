@@ -10,6 +10,8 @@ const path = require("path");
  * - status
  * - reference
  * - custom metadata rows
+ * - compact metadata rendering
+ * - adaptive spacing for dense cover metadata
  */
 
 class CoverRenderer {
@@ -33,8 +35,19 @@ class CoverRenderer {
       status: null,
       reference: null,
       meta: [],
+      compactMeta: null,
       ...overrides
     };
+
+    if (
+      merged.compactMeta !== null &&
+      merged.compactMeta !== undefined &&
+      typeof merged.compactMeta !== "boolean"
+    ) {
+      throw new Error(
+        "cover.compactMeta must be a boolean value."
+      );
+    }
 
     const toText = (value) => {
       if (value === null || value === undefined) {
@@ -53,6 +66,7 @@ class CoverRenderer {
       preparedByLabel: toText(merged.preparedByLabel),
       logo: merged.logo || null,
       logoWidth: merged.logoWidth,
+      compactMeta: merged.compactMeta,
       meta: this._normalizeMeta(merged)
     };
 
@@ -245,30 +259,97 @@ class CoverRenderer {
       y = pdf.y + style.spacingAfter;
     }
 
-    const ruleMinY = pageHeight * 0.58;
+    const denseMeta =
+      cover.meta.length > 3 ||
+      (cover.author && cover.meta.length > 2);
+
+    const ruleMinY = pageHeight * (denseMeta ? 0.50 : 0.58);
     const ruleY = Math.max(y + 12, ruleMinY);
 
     this._drawRule(ruleY);
 
-    let metaY = Math.max(pageHeight * 0.68, ruleY + 36);
+    let metaY = Math.max(
+      pageHeight * (denseMeta ? 0.56 : 0.68),
+      ruleY + (denseMeta ? 24 : 36)
+    );
+
+    const dateStyle = styles.get("coverDate");
+
+    const maxSafeDateY =
+      pageHeight - layout.margins.bottom - dateStyle.fontSize;
+
+    const maxMetaY = maxSafeDateY - 16;
 
     if (cover.author) {
       const labelStyle = styles.get("coverMetaLabel");
       const valueStyle = styles.get("coverMetaValue");
 
-      if (cover.preparedByLabel) {
+      const hasMeta = cover.meta.length > 0;
+
+      const labelSpacing = hasMeta
+        ? 2
+        : labelStyle.spacingAfter;
+
+      const valueSpacing = hasMeta
+        ? (denseMeta ? 6 : 8)
+        : valueStyle.spacingAfter;
+
+      let showPreparedByLabel = Boolean(cover.preparedByLabel);
+
+      const preparedByLabelText = labelStyle.uppercase
+        ? cover.preparedByLabel.toUpperCase()
+        : cover.preparedByLabel;
+
+      const measureAuthor = (withLabel) => {
+        let requiredHeight = 0;
+
+        if (withLabel) {
+          setFont(labelStyle);
+
+          requiredHeight +=
+            pdf.heightOfString(preparedByLabelText, {
+              width
+            }) + labelSpacing;
+        }
+
+        setFont(valueStyle);
+
+        requiredHeight +=
+          pdf.heightOfString(cover.author, {
+            width,
+            lineGap: valueStyle.lineGap
+          }) + valueSpacing;
+
+        return requiredHeight;
+      };
+
+      let authorHeight = measureAuthor(showPreparedByLabel);
+
+      if (
+        metaY + authorHeight > maxMetaY &&
+        showPreparedByLabel &&
+        hasMeta
+      ) {
+        showPreparedByLabel = false;
+        authorHeight = measureAuthor(showPreparedByLabel);
+      }
+
+      if (metaY + authorHeight > maxMetaY) {
+        throw new Error(
+          "Cover page author block does not fit on one page. " +
+          "Reduce cover content or remove some metadata rows."
+        );
+      }
+
+      if (showPreparedByLabel) {
         setFont(labelStyle);
 
-        const labelText = labelStyle.uppercase
-          ? cover.preparedByLabel.toUpperCase()
-          : cover.preparedByLabel;
-
-        pdf.text(labelText, x, metaY, {
+        pdf.text(preparedByLabelText, x, metaY, {
           width,
           align: "center"
         });
 
-        metaY = pdf.y + labelStyle.spacingAfter;
+        metaY = pdf.y + labelSpacing;
       }
 
       setFont(valueStyle);
@@ -279,82 +360,89 @@ class CoverRenderer {
         lineGap: valueStyle.lineGap
       });
 
-      metaY = pdf.y + valueStyle.spacingAfter;
+      metaY = pdf.y + valueSpacing;
     }
 
     if (cover.meta.length > 0) {
-      const labelStyle = styles.get("coverMetaLabel");
-      const valueStyle = styles.get("coverMetaValue");
+      const availableMetaSpace = maxMetaY - metaY;
 
-      const maxMetaY =
-        pageHeight - layout.margins.bottom - 48;
+      if (availableMetaSpace <= 0) {
+        throw new Error(
+          "Cover page metadata rows do not fit on one page. " +
+          "Reduce the number of cover metadata rows."
+        );
+      }
 
-      for (const row of cover.meta) {
-        let requiredHeight = 0;
-        let labelText = "";
+      let compact;
+      let tight = false;
 
-        if (row.label) {
-          setFont(labelStyle);
+      if (cover.compactMeta === true) {
+        compact = true;
+      } else if (cover.compactMeta === false) {
+        compact = false;
+      } else {
+        const stackedHeight = this._measureMetaRowsHeight(
+          cover.meta,
+          false,
+          false
+        );
 
-          labelText = labelStyle.uppercase
-            ? row.label.toUpperCase()
-            : row.label;
+        compact =
+          stackedHeight > availableMetaSpace ||
+          cover.meta.length > 3;
+      }
 
-          requiredHeight +=
-            pdf.heightOfString(labelText, {
-              width
-            }) + labelStyle.spacingAfter;
-        }
+      let metaHeight = this._measureMetaRowsHeight(
+        cover.meta,
+        compact,
+        false
+      );
 
-        setFont(valueStyle);
+      if (metaHeight > availableMetaSpace) {
+        if (!compact && cover.compactMeta !== false) {
+          compact = true;
 
-        requiredHeight +=
-          pdf.heightOfString(row.value, {
-            width,
-            lineGap: valueStyle.lineGap
-          }) + valueStyle.spacingAfter;
-
-        if (metaY + requiredHeight > maxMetaY) {
-          throw new Error(
-            "Cover page metadata rows do not fit on one page. " +
-            "Reduce the number of cover metadata rows."
+          metaHeight = this._measureMetaRowsHeight(
+            cover.meta,
+            compact,
+            false
           );
         }
-
-        if (row.label) {
-          setFont(labelStyle);
-
-          pdf.text(labelText, x, metaY, {
-            width,
-            align: "center"
-          });
-
-          metaY = pdf.y + labelStyle.spacingAfter;
-        }
-
-        setFont(valueStyle);
-
-        pdf.text(row.value, x, metaY, {
-          width,
-          align: "center",
-          lineGap: valueStyle.lineGap
-        });
-
-        metaY = pdf.y + valueStyle.spacingAfter;
       }
+
+      if (metaHeight > availableMetaSpace) {
+        tight = true;
+
+        metaHeight = this._measureMetaRowsHeight(
+          cover.meta,
+          compact,
+          true
+        );
+      }
+
+      if (metaHeight > availableMetaSpace) {
+        throw new Error(
+          "Cover page metadata rows do not fit on one page. " +
+          "Reduce the number of cover metadata rows."
+        );
+      }
+
+      metaY = this._drawMetaRows(
+        cover.meta,
+        compact,
+        metaY,
+        maxMetaY,
+        tight
+      );
     }
 
     if (cover.date) {
-      const dateStyle = styles.get("coverDate");
-
       const dateMinY = pageHeight * 0.78;
-      let dateY = Math.max(metaY, dateMinY);
 
-      const maxSafeY =
-        pageHeight - layout.margins.bottom - dateStyle.fontSize;
+      let dateY = Math.max(metaY + 10, dateMinY);
 
-      if (dateY > maxSafeY) {
-        dateY = maxSafeY;
+      if (dateY > maxSafeDateY) {
+        dateY = maxSafeDateY;
       }
 
       setFont(dateStyle);
@@ -366,6 +454,168 @@ class CoverRenderer {
     }
 
     this.document._applyDefaultFont();
+  }
+
+  _getMetaSpacing(compact, rows, tight = false) {
+    if (compact) {
+      return {
+        label: 0,
+        value: tight ? 2 : 4
+      };
+    }
+
+    if (rows.length > 3) {
+      return {
+        label: 2,
+        value: tight ? 6 : 10
+      };
+    }
+
+    const labelStyle = this.document.styles.get("coverMetaLabel");
+    const valueStyle = this.document.styles.get("coverMetaValue");
+
+    return {
+      label: labelStyle.spacingAfter,
+      value: tight
+        ? Math.min(10, valueStyle.spacingAfter)
+        : valueStyle.spacingAfter
+    };
+  }
+
+  _formatCompactMetaRow(row) {
+    if (!row.label) {
+      return row.value;
+    }
+
+    const labelStyle = this.document.styles.get("coverMetaLabel");
+
+    const label = labelStyle.uppercase
+      ? row.label.toUpperCase()
+      : row.label;
+
+    return `${label}: ${row.value}`;
+  }
+
+  _measureMetaRowsHeight(rows, compact, tight = false) {
+    const pdf = this.document.doc;
+    const width = this.document.layout.contentWidth;
+
+    const labelStyle = this.document.styles.get("coverMetaLabel");
+    const valueStyle = this.document.styles.get("coverMetaValue");
+
+    const spacing = this._getMetaSpacing(compact, rows, tight);
+
+    let height = 0;
+
+    for (const row of rows) {
+      if (compact) {
+        const text = this._formatCompactMetaRow(row);
+
+        pdf.font(valueStyle.fontFamily).fontSize(valueStyle.fontSize);
+
+        height +=
+          pdf.heightOfString(text, {
+            width,
+            lineGap: valueStyle.lineGap
+          }) + spacing.value;
+
+        continue;
+      }
+
+      if (row.label) {
+        pdf.font(labelStyle.fontFamily).fontSize(labelStyle.fontSize);
+
+        const labelText = labelStyle.uppercase
+          ? row.label.toUpperCase()
+          : row.label;
+
+        height +=
+          pdf.heightOfString(labelText, {
+            width
+          }) + spacing.label;
+      }
+
+      pdf.font(valueStyle.fontFamily).fontSize(valueStyle.fontSize);
+
+      height +=
+        pdf.heightOfString(row.value, {
+          width,
+          lineGap: valueStyle.lineGap
+        }) + spacing.value;
+    }
+
+    return height;
+  }
+
+  _drawMetaRows(rows, compact, metaY, maxMetaY, tight = false) {
+    const pdf = this.document.doc;
+    const layout = this.document.layout;
+
+    const x = layout.contentX;
+    const width = layout.contentWidth;
+
+    const labelStyle = this.document.styles.get("coverMetaLabel");
+    const valueStyle = this.document.styles.get("coverMetaValue");
+
+    const spacing = this._getMetaSpacing(compact, rows, tight);
+
+    const setFont = (style) => {
+      pdf.font(style.fontFamily).fontSize(style.fontSize);
+
+      if (style.color) {
+        pdf.fillColor(style.color);
+      }
+    };
+
+    for (const row of rows) {
+      if (compact) {
+        const text = this._formatCompactMetaRow(row);
+
+        setFont(valueStyle);
+
+        pdf.text(text, x, metaY, {
+          width,
+          align: "center",
+          lineGap: valueStyle.lineGap
+        });
+
+        metaY = pdf.y + spacing.value;
+      } else {
+        if (row.label) {
+          setFont(labelStyle);
+
+          const labelText = labelStyle.uppercase
+            ? row.label.toUpperCase()
+            : row.label;
+
+          pdf.text(labelText, x, metaY, {
+            width,
+            align: "center"
+          });
+
+          metaY = pdf.y + spacing.label;
+        }
+
+        setFont(valueStyle);
+
+        pdf.text(row.value, x, metaY, {
+          width,
+          align: "center",
+          lineGap: valueStyle.lineGap
+        });
+
+        metaY = pdf.y + spacing.value;
+      }
+
+      if (metaY > maxMetaY) {
+        throw new Error(
+          "Cover page metadata rows do not fit on one page. " +
+          "Reduce the number of cover metadata rows."
+        );
+      }
+    }
+
+    return metaY;
   }
 
   _drawLogo(logo, logoWidth, startY) {

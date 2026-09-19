@@ -80,6 +80,7 @@ const ALLOWED_OVERRIDE_KEYS = new Set([
  * Centralized typography and spacing rules for the engine.
  * This ensures consistent styling across all documents.
  */
+
 class StyleRegistry {
   constructor(themeManager = null, userStyles = {}) {
     const fallbackColors = {
