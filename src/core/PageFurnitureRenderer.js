@@ -4,6 +4,7 @@
  *
  * It relies on PDFKit's buffered pages feature.
  */
+
 class PageFurnitureRenderer {
   constructor(formalDocument) {
     this.document = formalDocument;
@@ -44,9 +45,7 @@ class PageFurnitureRenderer {
       pdf.switchToPage(index);
 
       const physicalPageNumber = index - range.start + 1;
-
       const displayPageNumber = physicalPageNumber - coverPages + start - 1;
-
       const isCoverPage = physicalPageNumber <= coverPages;
 
       const context = {
@@ -56,19 +55,19 @@ class PageFurnitureRenderer {
         date: options.date || "",
         confidentiality: options.confidentiality || "",
         page: displayPageNumber > 0 ? String(displayPageNumber) : "",
-        totalPages: numberedTotalPages > 0 ? String(numberedTotalPages) : "",
+        totalPages: numberedTotalPages > 0 ? String(numberedTotalPages) : ""
       };
 
       this._renderSection("header", {
         isCoverPage,
         physicalPageNumber,
-        context,
+        context
       });
 
       this._renderSection("footer", {
         isCoverPage,
         physicalPageNumber,
-        context,
+        context
       });
     }
   }
@@ -77,7 +76,7 @@ class PageFurnitureRenderer {
     const config = this._getConfig(
       sectionName,
       payload.isCoverPage,
-      payload.physicalPageNumber,
+      payload.physicalPageNumber
     );
 
     let enabled = config.enabled;
@@ -103,10 +102,12 @@ class PageFurnitureRenderer {
 
     pdf.font(style.fontFamily).fontSize(style.fontSize);
 
+    if (style.color) {
+      pdf.fillColor(style.color);
+    }
+
     const leftText = this._prepareText(config.left, payload.context, style);
-
     const centerText = this._prepareText(config.center, payload.context, style);
-
     const rightText = this._prepareText(config.right, payload.context, style);
 
     this._drawAlignedText(leftText, "left", y, maxWidth);
@@ -119,7 +120,11 @@ class PageFurnitureRenderer {
           ? layout.margins.top * 0.72
           : layout.pageHeight - layout.margins.bottom * 0.72;
 
-      this._drawHorizontalRule(ruleY, style.ruleWidth || 0.5);
+      this._drawHorizontalRule(
+        ruleY,
+        style.ruleWidth || 0.5,
+        style.ruleColor
+      );
     }
   }
 
@@ -139,7 +144,7 @@ class PageFurnitureRenderer {
 
     return {
       ...base,
-      ...(override || {}),
+      ...(override || {})
     };
   }
 
@@ -244,11 +249,11 @@ class PageFurnitureRenderer {
     }
 
     pdf.text(fittedText, x, y, {
-      lineBreak: false,
+      lineBreak: false
     });
   }
 
-  _drawHorizontalRule(y, lineWidth) {
+  _drawHorizontalRule(y, lineWidth, color) {
     const pdf = this.document.doc;
     const layout = this.document.layout;
 
@@ -256,9 +261,12 @@ class PageFurnitureRenderer {
 
     pdf.lineWidth(lineWidth);
 
+    if (color) {
+      pdf.strokeColor(color);
+    }
+
     pdf.moveTo(layout.contentX, y);
     pdf.lineTo(layout.contentX + layout.contentWidth, y);
-
     pdf.stroke();
 
     pdf.restore();
