@@ -106,7 +106,8 @@ class FormalDocument {
       header: DEFAULT_HEADER,
       footer: DEFAULT_FOOTER,
       pageNumbering: DEFAULT_PAGE_NUMBERING,
-      theme: "formal"
+      theme: "formal",
+      styles: {}
     };
 
     this.options = {
@@ -160,7 +161,7 @@ class FormalDocument {
     });
 
     this.layout = new PageManager(this.doc, this.options.margins);
-    this.styles = new StyleRegistry(this.theme);
+    this.styles = new StyleRegistry(this.theme, this.options.styles);
 
     this.lists = new ListRenderer(this);
     this.tables = new TableRenderer(this);
