@@ -31,8 +31,8 @@ const PRESETS = {
       tableZebraBg: null,
       calloutBg: "#f8f8f8",
       calloutBorder: "#cccccc",
-      coverAccent: "#111111"
-    }
+      coverAccent: "#111111",
+    },
   },
   modern: {
     colors: {
@@ -46,8 +46,8 @@ const PRESETS = {
       tableZebraBg: "#f9fafb",
       calloutBg: "#eff6ff",
       calloutBorder: "#bfdbfe",
-      coverAccent: "#2563eb"
-    }
+      coverAccent: "#2563eb",
+    },
   },
   corporate: {
     colors: {
@@ -61,8 +61,8 @@ const PRESETS = {
       tableZebraBg: "#f8fafc",
       calloutBg: "#f0f9ff",
       calloutBorder: "#bae6fd",
-      coverAccent: "#0369a1"
-    }
+      coverAccent: "#0369a1",
+    },
   },
   academic: {
     colors: {
@@ -76,8 +76,8 @@ const PRESETS = {
       tableZebraBg: null,
       calloutBg: "#fcfcfc",
       calloutBorder: "#800000",
-      coverAccent: "#800000"
-    }
+      coverAccent: "#800000",
+    },
   },
   minimal: {
     colors: {
@@ -91,9 +91,9 @@ const PRESETS = {
       tableZebraBg: null,
       calloutBg: "#fafafa",
       calloutBorder: "#cccccc",
-      coverAccent: "#333333"
-    }
-  }
+      coverAccent: "#333333",
+    },
+  },
 };
 
 class ThemeManager {
@@ -109,7 +109,7 @@ class ThemeManager {
       if (!PRESETS[themeOption]) {
         throw new Error(
           `Unknown theme preset: "${themeOption}". ` +
-          `Valid presets: ${Object.keys(PRESETS).join(", ")}`
+            `Valid presets: ${Object.keys(PRESETS).join(", ")}`,
         );
       }
       basePreset = PRESETS[themeOption];
@@ -131,7 +131,7 @@ class ThemeManager {
         if (!isValidColor(value)) {
           throw new Error(
             `Invalid color value for "${key}": "${value}". ` +
-            `Expected hex color (e.g., #1f2937).`
+              `Expected hex color (e.g., #1f2937).`,
           );
         }
         mergedColors[key] = normalizeColor(value);
@@ -146,4 +146,9 @@ class ThemeManager {
   }
 }
 
-module.exports = { ThemeManager, PRESETS };
+module.exports = {
+  ThemeManager,
+  PRESETS,
+  isValidColor,
+  normalizeColor,
+};
