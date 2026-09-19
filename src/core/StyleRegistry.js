@@ -1,10 +1,87 @@
+const {
+  isValidColor,
+  normalizeColor
+} = require("./ThemeManager");
+
+const COLOR_KEYS = new Set([
+  "color",
+  "markerColor",
+  "ruleColor",
+  "borderColor",
+  "cellColor",
+  "headerColor",
+  "titleColor",
+  "background",
+  "border",
+  "accent",
+  "headerBgColor",
+  "zebraBgColor"
+]);
+
+const NUMERIC_KEYS = new Set([
+  "fontSize",
+  "lineGap",
+  "spacingBefore",
+  "spacingAfter",
+  "spacingAfterItem",
+  "firstLineIndent",
+  "leftIndent",
+  "rightIndent",
+  "nestedIndent",
+  "markerGap",
+  "cellFontSize",
+  "headerFontSize",
+  "cellPaddingX",
+  "cellPaddingY",
+  "topRuleWidth",
+  "headerRuleWidth",
+  "bottomRuleWidth",
+  "rowRuleWidth",
+  "ruleWidth",
+  "lineWidth",
+  "widthRatio",
+  "defaultWidthRatio",
+  "borderWidth",
+  "paddingX",
+  "paddingY",
+  "accentWidth",
+  "titleFontSize",
+  "titleSpacingAfter"
+]);
+
+const BOOLEAN_KEYS = new Set([
+  "uppercase",
+  "rowRules"
+]);
+
+const STRING_KEYS = new Set([
+  "fontFamily",
+  "cellFontFamily",
+  "headerFontFamily",
+  "bulletMarker"
+]);
+
+const ALIGN_VALUES = new Set([
+  "left",
+  "center",
+  "right",
+  "justify"
+]);
+
+const ALLOWED_OVERRIDE_KEYS = new Set([
+  ...COLOR_KEYS,
+  ...NUMERIC_KEYS,
+  ...BOOLEAN_KEYS,
+  ...STRING_KEYS,
+  "align"
+]);
+
 /**
  * Centralized typography and spacing rules for the engine.
  * This ensures consistent styling across all documents.
  */
-
 class StyleRegistry {
-  constructor(themeManager) {
+  constructor(themeManager = null, userStyles = {}) {
     const fallbackColors = {
       text: "#111111",
       heading: "#111111",
@@ -260,6 +337,8 @@ class StyleRegistry {
         color: c.muted
       }
     };
+
+    this._applyUserStyleOverrides(userStyles);
   }
 
   get(styleName) {
@@ -270,6 +349,123 @@ class StyleRegistry {
     }
 
     return style;
+  }
+
+  _applyUserStyleOverrides(userStyles) {
+    if (userStyles === undefined || userStyles === null) {
+      return;
+    }
+
+    if (typeof userStyles !== "object" || Array.isArray(userStyles)) {
+      throw new Error(
+        "document.styles must be an object of style overrides."
+      );
+    }
+
+    for (const [styleName, overrides] of Object.entries(userStyles)) {
+      if (!Object.prototype.hasOwnProperty.call(this.styles, styleName)) {
+        throw new Error(
+          `Unknown style override: "${styleName}".`
+        );
+      }
+
+      if (
+        !overrides ||
+        typeof overrides !== "object" ||
+        Array.isArray(overrides)
+      ) {
+        throw new Error(
+          `Style override "${styleName}" must be an object.`
+        );
+      }
+
+      const merged = {
+        ...this.styles[styleName]
+      };
+
+      for (const [key, value] of Object.entries(overrides)) {
+        if (!ALLOWED_OVERRIDE_KEYS.has(key)) {
+          throw new Error(
+            `Unknown style property "${key}" in style override "${styleName}".`
+          );
+        }
+
+        merged[key] = this._normalizeOverrideValue(
+          styleName,
+          key,
+          value
+        );
+      }
+
+      this.styles[styleName] = merged;
+    }
+  }
+
+  _normalizeOverrideValue(styleName, key, value) {
+    if (COLOR_KEYS.has(key)) {
+      if (value === null) {
+        return null;
+      }
+
+      if (typeof value !== "string" || !isValidColor(value)) {
+        throw new Error(
+          `Invalid color for ${styleName}.${key}: "${value}". ` +
+          `Expected a hex color such as #1f2937.`
+        );
+      }
+
+      return normalizeColor(value);
+    }
+
+    if (NUMERIC_KEYS.has(key)) {
+      if (
+        typeof value !== "number" ||
+        !Number.isFinite(value) ||
+        value < 0
+      ) {
+        throw new Error(
+          `Invalid numeric value for ${styleName}.${key}: "${value}". ` +
+          `Expected a non-negative number.`
+        );
+      }
+
+      return value;
+    }
+
+    if (BOOLEAN_KEYS.has(key)) {
+      if (typeof value !== "boolean") {
+        throw new Error(
+          `Invalid boolean value for ${styleName}.${key}: "${value}". ` +
+          `Expected true or false.`
+        );
+      }
+
+      return value;
+    }
+
+    if (key === "align") {
+      if (!ALIGN_VALUES.has(value)) {
+        throw new Error(
+          `Invalid alignment for ${styleName}.${key}: "${value}". ` +
+          `Expected one of: left, center, right, justify.`
+        );
+      }
+
+      return value;
+    }
+
+    if (STRING_KEYS.has(key)) {
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error(
+          `Invalid string value for ${styleName}.${key}: "${value}". ` +
+          `Expected a non-empty string.`
+        );
+      }
+
+      return value;
+    }
+
+    return value;
   }
 }
 
